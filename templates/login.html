@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>登录 - 疲劳驾驶智能检测系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <h1>用户登录</h1>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit">登 录</button>
+            </form>
+            <div id="message"></div>
+            <div class="auth-links">
+                <a href="{{ url_for('register') }}">还没有账号？点击注册</a>
+                <a href="{{ url_for('forgot_password') }}">忘记密码？</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById("login-form").addEventListener("submit", function(event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            const messageDiv = document.getElementById("message");
+            
+            fetch("{{ url_for('login') }}", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                messageDiv.textContent = data.message;
+                if (data.success) {
+                    messageDiv.style.color = "var(--success-color)";
+                    window.location.href = data.redirect_url;
+                } else {
+                    messageDiv.style.color = "var(--error-color)";
+                }
+            });
+        });
+    </script>
+</body>
+</html>

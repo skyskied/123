@@ -1,0 +1,173 @@
+{% extends "layout.html" %}
+{% block title %}图片线框调试 - 管理员工具{% endblock %}
+{% block page_title %}MediaPipe 特征点绘图诊断{% endblock %}
+
+{% block content %}
+<style>
+    .debug-container {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+    }
+    .debug-sidebar {
+        flex: 0 0 340px;
+        background: var(--card-background, #fff);
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        border: 1px solid var(--border-color, #eee);
+    }
+    .debug-main {
+        flex: 1;
+        background: var(--card-background, #fff);
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        border: 1px solid var(--border-color, #eee);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 400px;
+    }
+    .image-preview-wrapper {
+        width: 100%;
+        max-height: 500px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #f8f9fa;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        overflow: hidden;
+    }
+    .image-preview-wrapper img {
+        max-width: 100%;
+        max-height: 500px;
+        object-fit: contain;
+    }
+    .data-grid-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #f1f1f1;
+        font-size: 14px;
+        color: #555;
+    }
+    .data-grid-item:last-child {
+        border-bottom: none;
+    }
+    .data-value {
+        font-weight: 600;
+        color: #333;
+    }
+    .section-title {
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #333;
+        border-left: 4px solid var(--primary-color, #007bff);
+        padding-left: 10px;
+    }
+</style>
+
+<div class="content-card full-height" style="background: transparent; box-shadow: none; border: none; padding: 0;">
+    <div style="margin-bottom: 20px;">
+        <a href="{{ url_for('index') }}" class="btn" style="background-color: #6c757d; padding: 8px 15px; font-size: 14px; font-weight: normal;"><i class="fas fa-arrow-left"></i> 返回控制台首页</a>
+    </div>
+
+    <div class="debug-container">
+        <div class="debug-sidebar">
+            <div class="section-title">图像样本采集</div>
+            <p style="color: #666; font-size: 13px; margin-bottom: 15px;">提取全量 468 个三维面部特征点进行工程验证。</p>
+
+            <div class="file-drop-area" style="border-color: #007bff; padding: 25px 20px; text-align: center; border-radius: 6px; border-style: dashed;">
+                <span class="file-msg" style="font-size: 14px; color: #555; display: block; margin-bottom: 10px;">点击选取测试样本</span>
+                <input class="file-input" type="file" id="image-input" accept="image/png, image/jpeg, image/jpg" onchange="previewImage()">
+            </div>
+
+            <button onclick="uploadDebugImage()" class="btn btn-block" style="margin-top: 15px; font-size: 15px;" id="analyze-btn">提交执行诊断</button>
+
+            <div id="image-result" style="display: none; margin-top: 30px;">
+                <div class="section-title">诊断指标输出</div>
+                <div id="result-content" style="background: #f8f9fa; padding: 10px 15px; border-radius: 6px; border: 1px solid #e9ecef;">
+                    </div>
+            </div>
+        </div>
+
+        <div class="debug-main">
+            <div class="image-preview-wrapper">
+                <span id="preview-text" style="color: #999; font-size: 14px;">等待图像输入...</span>
+                <img id="image-preview" src="" alt="诊断视图" style="display: none;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentFile = null;
+
+    function previewImage() {
+        const fileInput = document.getElementById('image-input');
+        const preview = document.getElementById('image-preview');
+        const previewText = document.getElementById('preview-text');
+
+        if (fileInput.files && fileInput.files[0]) {
+            currentFile = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                previewText.style.display = 'none';
+                document.querySelector('.file-msg').innerText = "已加载: " + currentFile.name;
+            }
+            reader.readAsDataURL(currentFile);
+        }
+    }
+
+    async function uploadDebugImage() {
+        if (!currentFile) {
+            alert("请首先指定诊断图像样本。");
+            return;
+        }
+
+        const btn = document.getElementById('analyze-btn');
+        btn.disabled = true;
+        btn.innerText = '正在执行算法管线...';
+
+        const formData = new FormData();
+        formData.append('file', currentFile);
+
+        try {
+            const response = await fetch('/admin/upload-debug-image', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            if (data.error) {
+                alert("后端错误: " + data.error);
+            } else {
+                document.getElementById('image-preview').src = data.image_url;
+
+                const info = data.media_pipe_info;
+                const content = document.getElementById('result-content');
+                const captureStatus = info.face_mesh_captured ? '<span style="color:#28a745;">有效抓取</span>' : '<span style="color:#dc3545;">坐标丢失</span>';
+
+                content.innerHTML = `
+                    <div class="data-grid-item"><span>特征点定位状态:</span><span class="data-value">${captureStatus}</span></div>
+                    <div class="data-grid-item"><span>眼部纵横比 (EAR):</span><span class="data-value">${info.ear.toFixed(4)}</span></div>
+                    <div class="data-grid-item"><span>唇部纵横比 (MAR):</span><span class="data-value">${info.mar.toFixed(4)}</span></div>
+                `;
+                document.getElementById('image-result').style.display = 'block';
+            }
+        } catch (error) {
+            console.error(error);
+            alert("请求异常，请查阅后端服务日志。");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = '提交执行诊断';
+        }
+    }
+</script>
+{% endblock %}

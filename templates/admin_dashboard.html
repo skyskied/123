@@ -1,0 +1,253 @@
+{% extends "layout.html" %}
+
+{% block title %}用户管理 - {{ super() }}{% endblock %}
+
+{% block page_title %}用户管理{% endblock %}
+
+{% block content %}
+<div class="content-card">
+    <div class="table-responsive">
+        <table class="user-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>头像</th>
+                    <th>用户名</th>
+                    <th>邮箱</th>
+                    <th>角色</th>
+                    <th>注册时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>
+                        {% if user.avatar %}
+                        <img src="{{ url_for('uploaded_file', filename=user.avatar) }}" alt="avatar" class="table-avatar">
+                        {% else %}
+                        <div class="avatar-placeholder">{{ user.username[0] | upper }}</div>
+                        {% endif %}
+                    </td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        {% if user.is_admin %}
+                        <span class="badge badge-admin">管理员</span>
+                        {% else %}
+                        <span class="badge badge-user">用户</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ user.created_at }}</td>
+                    <td>
+                        <button class="btn-icon edit-btn" onclick="openEditModal('{{ user.id }}', '{{ user.username }}', '{{ user.email }}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        {% if not user.is_admin or user.username != session.username %}
+                        <button class="btn-icon delete-btn" onclick="deleteUser('{{ user.id }}')">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 编辑用户模态框 -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeEditModal()">&times;</span>
+        <h2>修改用户信息</h2>
+        <form id="editUserForm">
+            <input type="hidden" id="editUserId">
+            <div class="form-group">
+                <label for="editUsername">用户名</label>
+                <input type="text" id="editUsername" required>
+            </div>
+            <div class="form-group">
+                <label for="editEmail">邮箱</label>
+                <input type="email" id="editEmail" required>
+            </div>
+            <div class="form-group">
+                <label for="editPassword">重置密码 (留空则不修改)</label>
+                <input type="password" id="editPassword" placeholder="输入新密码">
+            </div>
+            <button type="button" class="btn" onclick="submitEditUser()">保存修改</button>
+        </form>
+    </div>
+</div>
+
+<style>
+    .user-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+    
+    .user-table th, .user-table td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .user-table th {
+        background-color: var(--sidebar-background);
+        color: var(--text-color);
+    }
+    
+    .table-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    
+    .avatar-placeholder {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: var(--primary-color);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+    
+    .badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+    }
+    
+    .badge-admin {
+        background-color: #f39c12;
+        color: white;
+    }
+    
+    .badge-user {
+        background-color: #3498db;
+        color: white;
+    }
+    
+    .btn-icon {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.1em;
+        margin: 0 5px;
+        padding: 5px;
+        transition: color 0.3s;
+    }
+    
+    .edit-btn { color: #3498db; }
+    .delete-btn { color: #e74c3c; }
+    
+    .edit-btn:hover { color: #2980b9; }
+    .delete-btn:hover { color: #c0392b; }
+    
+    /* Modal Styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+    
+    .modal-content {
+        background-color: var(--card-background);
+        margin: 10% auto;
+        padding: 30px;
+        border-radius: 8px;
+        width: 400px;
+        position: relative;
+    }
+    
+    .close {
+        position: absolute;
+        right: 20px;
+        top: 15px;
+        color: #aaa;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    
+    .close:hover {
+        color: white;
+    }
+</style>
+
+<script>
+    function deleteUser(userId) {
+        if(confirm('确定要删除该用户吗？此操作不可恢复！')) {
+            fetch(`/admin/delete_user/${userId}`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    alert('删除成功');
+                    location.reload();
+                } else {
+                    alert('删除失败: ' + data.message);
+                }
+            });
+        }
+    }
+    
+    function openEditModal(id, username, email) {
+        document.getElementById('editUserId').value = id;
+        document.getElementById('editUsername').value = username;
+        document.getElementById('editEmail').value = email;
+        document.getElementById('editPassword').value = '';
+        document.getElementById('editModal').style.display = 'block';
+    }
+    
+    function closeEditModal() {
+        document.getElementById('editModal').style.display = 'none';
+    }
+    
+    function submitEditUser() {
+        const id = document.getElementById('editUserId').value;
+        const username = document.getElementById('editUsername').value;
+        const email = document.getElementById('editEmail').value;
+        const password = document.getElementById('editPassword').value;
+        
+        fetch(`/admin/update_user/${id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: username,
+                email: email,
+                password: password
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                alert('更新成功');
+                location.reload();
+            } else {
+                alert('更新失败: ' + data.message);
+            }
+        });
+    }
+    
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('editModal')) {
+            closeEditModal();
+        }
+    }
+</script>
+{% endblock %}

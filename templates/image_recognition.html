@@ -1,0 +1,190 @@
+{% extends "layout.html" %}
+
+{% block title %}图片识别 - {{ super() }}{% endblock %}
+
+{% block page_title %}静态图片疲劳检测{% endblock %}
+
+{% block content %}
+<div class="content-card full-height">
+    <div style="margin-bottom: 15px;">
+        <a href="{{ url_for('index') }}" class="btn" style="background-color: #666;"><i class="fas fa-arrow-left"></i> 返回首页</a>
+    </div>
+
+    <div class="recognition-layout">
+        <div class="recognition-controls">
+            <h3>上传图片</h3>
+            <div class="file-drop-area">
+                <span class="file-msg">拖拽图片到此处或点击上传</span>
+                <input class="file-input" type="file" id="image-input" accept="image/png, image/jpeg, image/jpg" onchange="previewImage()">
+            </div>
+            <button onclick="uploadImage()" class="btn btn-block" style="margin-top: 20px;">开始分析</button>
+            
+            <div class="result-box" id="image-result" style="display: none; margin-top: 20px;">
+                <h3>分析报告</h3>
+                <div id="result-content"></div>
+            </div>
+        </div>
+        
+        <div class="recognition-display">
+            <div class="image-viewer">
+                <span id="preview-text">图片预览区域</span>
+                <img id="image-preview" src="" alt="预览图" style="display: none;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .full-height {
+        height: calc(100vh - 160px); /* Adjust based on topbar/padding */
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .recognition-layout {
+        display: flex;
+        gap: 30px;
+        height: 100%;
+    }
+    
+    .recognition-controls {
+        width: 300px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .recognition-display {
+        flex-grow: 1;
+        background-color: #000;
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    
+    .image-viewer {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .image-viewer img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+    
+    #preview-text {
+        color: #666;
+        font-size: 1.2em;
+    }
+    
+    .file-drop-area {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 150px;
+        border: 2px dashed var(--border-color);
+        border-radius: 8px;
+        transition: 0.2s;
+        cursor: pointer;
+    }
+    
+    .file-drop-area:hover {
+        border-color: var(--primary-color);
+        background-color: rgba(0, 168, 255, 0.05);
+    }
+    
+    .file-input {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+    
+    .btn-block {
+        width: 100%;
+    }
+</style>
+
+<script>
+    function previewImage() {
+        const file = document.getElementById('image-input').files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('image-preview').src = e.target.result;
+                document.getElementById('image-preview').style.display = 'block';
+                document.getElementById('preview-text').style.display = 'none';
+                document.getElementById('image-result').style.display = 'none';
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+
+    async function uploadImage() {
+        const fileInput = document.getElementById('image-input');
+        const file = fileInput.files[0];
+        if (!file) {
+            alert("请先选择一张图片！");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+        
+        const btn = document.querySelector('.btn-block');
+        btn.disabled = true;
+        btn.innerText = '分析中...';
+
+        try {
+            const response = await fetch('/upload-image', { method: 'POST', body: formData });
+            const data = await response.json();
+
+            if (data.error) {
+                alert(data.error);
+            } else {
+                const resultBox = document.getElementById('image-result');
+                const content = document.getElementById('result-content');
+                const statusColor = data.label === 0 ? 'var(--success-color)' : 'var(--error-color)';
+                
+                // Show the processed image returned by backend
+                if (data.image_url) {
+                    document.getElementById('image-preview').src = data.image_url;
+                }
+
+                content.innerHTML = `
+                    <div style="margin-bottom: 10px;">
+                        <strong>检测结果:</strong> 
+                        <span style="color: ${statusColor}; font-weight: bold; font-size: 1.1em; display: block; margin-top: 5px;">${data.class}</span>
+                    </div>
+                    <div>
+                        <strong>置信度:</strong> 
+                        <div class="progress-bar-bg" style="background:#444; height:8px; border-radius:4px; margin-top:5px;">
+                            <div class="progress-bar-fill" style="width:${data.confidence * 100}%; background:${statusColor}; height:100%; border-radius:4px;"></div>
+                        </div>
+                        <div style="text-align:right; font-size:0.8em; margin-top:2px;">${(data.confidence * 100).toFixed(1)}%</div>
+                    </div>
+                `;
+                resultBox.style.display = 'block';
+            }
+        } catch (error) {
+            console.error(error);
+            alert("图片识别失败，请检查网络或后端服务。");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = '开始分析';
+        }
+    }
+</script>
+{% endblock %}

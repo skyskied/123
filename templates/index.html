@@ -1,0 +1,137 @@
+{% extends "layout.html" %}
+
+{% block title %}首页 - {{ super() }}{% endblock %}
+
+{% block page_title %}欢迎回来, {{ session.username }}!{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="welcome-banner">
+        <h1>疲劳驾驶智能检测系统</h1>
+        <p>基于深度学习的实时驾驶员状态监测与分析平台</p>
+    </div>
+
+    <div class="features-grid">
+        {% if session.is_admin %}
+        <a href="{{ url_for('admin_users') }}" class="feature-card admin-card">
+            <div class="icon-wrapper"><i class="fas fa-users-cog"></i></div>
+            <h3>用户管理</h3>
+            <p>管理系统用户，编辑信息或删除账号</p>
+        </a>
+        {% endif %}
+
+        <a href="{{ url_for('image_recognition') }}" class="feature-card">
+            <div class="icon-wrapper"><i class="fas fa-image"></i></div>
+            <h3>静态图片识别</h3>
+            <p>上传驾驶员照片，快速分析当前的疲劳与分心状态</p>
+        </a>
+
+        <a href="{{ url_for('video_recognition') }}" class="feature-card">
+            <div class="icon-wrapper"><i class="fas fa-video"></i></div>
+            <h3>视频文件分析</h3>
+            <p>上传行车记录视频，进行全流程逐帧行为检测</p>
+        </a>
+
+        <a href="{{ url_for('realtime_monitoring') }}" class="feature-card">
+            <div class="icon-wrapper"><i class="fas fa-camera"></i></div>
+            <h3>实时摄像头监控</h3>
+            <p>连接本地摄像头，实时守护驾驶安全</p>
+        </a>
+    </div>
+</div>
+
+<style>
+    .dashboard-container {
+        padding: 20px 0;
+    }
+
+    .welcome-banner {
+        background: linear-gradient(135deg, var(--primary-color), #2980b9);
+        color: white;
+        padding: 40px;
+        border-radius: 12px;
+        margin-bottom: 40px;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .welcome-banner h1 {
+        margin: 0 0 10px 0;
+        font-size: 2.5em;
+    }
+
+    .welcome-banner p {
+        margin: 0;
+        font-size: 1.2em;
+        opacity: 0.9;
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 30px;
+    }
+
+    .feature-card {
+        background-color: var(--card-background);
+        border-radius: 12px;
+        padding: 30px;
+        text-align: center;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: 1px solid transparent;
+        display: block;
+        color: var(--text-color);
+        text-decoration: none;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        border-color: var(--primary-color);
+    }
+
+    .icon-wrapper {
+        width: 80px;
+        height: 80px;
+        background-color: rgba(0, 168, 255, 0.1);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 2.5em;
+        color: var(--primary-color);
+        transition: all 0.3s ease;
+    }
+
+    .feature-card:hover .icon-wrapper {
+        background-color: var(--primary-color);
+        color: white;
+    }
+
+    .feature-card h3 {
+        margin: 10px 0;
+        font-size: 1.4em;
+    }
+
+    .feature-card p {
+        color: var(--text-secondary-color);
+        font-size: 0.9em;
+        line-height: 1.5;
+    }
+
+    .admin-card .icon-wrapper {
+        color: #f39c12;
+        background-color: rgba(243, 156, 18, 0.1);
+    }
+
+    .admin-card:hover .icon-wrapper {
+        background-color: #f39c12;
+        color: white;
+    }
+    
+    .admin-card:hover {
+        border-color: #f39c12;
+    }
+</style>
+{% endblock %}

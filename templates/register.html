@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>注册 - 疲劳驾驶智能检测系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <h1>创建新账户</h1>
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">邮箱</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit">注 册</button>
+            </form>
+            <div id="message"></div>
+            <div class="auth-links">
+                <a href="{{ url_for('login') }}">已有账号？点击登录</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById("register-form").addEventListener("submit", function(event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            const messageDiv = document.getElementById("message");
+
+            fetch("{{ url_for('register') }}", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                messageDiv.textContent = data.message;
+                if (data.success) {
+                    messageDiv.style.color = "var(--success-color)";
+                    setTimeout(() => { window.location.href = data.redirect_url; }, 2000);
+                } else {
+                    messageDiv.style.color = "var(--error-color)";
+                }
+            });
+        });
+    </script>
+</body>
+</html>

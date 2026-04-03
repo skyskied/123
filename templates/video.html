@@ -1,0 +1,302 @@
+{% extends "layout.html" %}
+
+{% block title %}视频播放 - {{ super() }}{% endblock %}
+
+{% block page_title %}视频分析播放{% endblock %}
+
+{% block content %}
+<div class="content-card full-height" style="display: flex; flex-direction: column;">
+    <div style="margin-bottom: 15px;">
+        <a href="{{ url_for('video_recognition') }}" class="btn" style="background-color: #666;"><i class="fas fa-arrow-left"></i> 返回上传</a>
+    </div>
+
+    <div class="video-wrapper" style="flex-grow: 1; background: #000; display: flex; justify-content: center; align-items: center; border-radius: 8px; overflow: hidden; position: relative;">
+        <!-- 加载中遮罩层 -->
+        <div id="loadingOverlay" style="position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:10;">
+            <div class="spinner"></div>
+            <h3 style="margin-top:20px;">正在缓冲...</h3>
+        </div>
+        
+        <!-- 🌟 核心修改：恢复 contain 模式，确保比例正确，同时 max-width/max-height 限制在容器内 -->
+        <img id="videoStream" src="{{ url_for('video_feed', filename=video_filename) }}" 
+             style="max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain;"
+             onload="hideLoading()">
+             
+        <!-- 控制栏 -->
+        <div class="video-controls-overlay">
+            <div class="progress-container" onclick="seekVideo(event)">
+                <div class="progress-bar-bg"></div>
+                <div class="progress-bar-buffered" id="progressBarBuffered" style="width: 0%;"></div>
+                <div class="progress-bar-current" id="progressBarCurrent" style="width: 0%;"></div>
+            </div>
+            
+            <div class="controls-row">
+                <button id="playPauseBtn" class="control-btn" onclick="togglePlay()"><i class="fas fa-pause"></i></button>
+                <span class="time-display" id="timeDisplay">00:00 / 00:00</span>
+                
+                <div style="flex-grow: 1;"></div>
+                
+                <div class="speed-control">
+                    <span id="speedLabel" onclick="cycleSpeed()">1.0x</span>
+                </div>
+                
+                <button class="control-btn" onclick="toggleFullscreen()"><i class="fas fa-expand"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .full-height {
+        height: calc(100vh - 160px);
+    }
+    
+    .video-wrapper {
+        position: relative;
+    }
+    
+    .video-controls-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+        padding: 20px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        box-sizing: border-box; /* Ensure padding doesn't increase width */
+    }
+    
+    .video-wrapper:hover .video-controls-overlay {
+        opacity: 1;
+    }
+    
+    .progress-container {
+        width: 100%;
+        height: 8px; /* Slightly taller for better clickability */
+        position: relative;
+        cursor: pointer;
+        margin-bottom: 15px;
+    }
+    
+    .progress-bar-bg {
+        width: 100%;
+        height: 100%;
+        background: rgba(255,255,255,0.2);
+        border-radius: 4px;
+        position: absolute;
+    }
+    
+    .progress-bar-buffered {
+        height: 100%;
+        background: rgba(255,255,255,0.5); /* Grey-white for buffered */
+        border-radius: 4px;
+        position: absolute;
+        top: 0;
+        left: 0;
+        transition: width 0.5s;
+    }
+    
+    .progress-bar-current {
+        height: 100%;
+        background: #fff; /* White for current */
+        border-radius: 4px;
+        position: absolute;
+        top: 0;
+        left: 0;
+        box-shadow: 0 0 10px rgba(255,255,255,0.5);
+    }
+    
+    /* Add a handle to the current progress bar */
+    .progress-bar-current::after {
+        content: '';
+        position: absolute;
+        right: -6px;
+        top: -3px;
+        width: 14px;
+        height: 14px;
+        background: #fff;
+        border-radius: 50%;
+        transform: scale(0);
+        transition: transform 0.2s;
+    }
+    
+    .progress-container:hover .progress-bar-current::after {
+        transform: scale(1);
+    }
+    
+    .controls-row {
+        display: flex;
+        align-items: center;
+        color: white;
+        gap: 15px;
+    }
+    
+    .control-btn {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.2em;
+        cursor: pointer;
+        padding: 5px;
+        transition: transform 0.2s;
+    }
+    
+    .control-btn:hover {
+        transform: scale(1.1);
+        color: var(--primary-color);
+    }
+    
+    .time-display {
+        font-family: monospace;
+        font-size: 0.9em;
+    }
+    
+    .speed-control {
+        cursor: pointer;
+        font-weight: bold;
+        padding: 5px 10px;
+        border-radius: 4px;
+    }
+    
+    .speed-control:hover {
+        background: rgba(255,255,255,0.2);
+    }
+    
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid rgba(255,255,255,0.3);
+        border-top: 4px solid #fff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+
+<script>
+    const filename = "{{ video_filename }}";
+    let totalFrames = 0;
+    let currentFps = 30;
+    let isPaused = false;
+    let currentSpeed = 1.0;
+    
+    function hideLoading() {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
+    
+    function formatTime(seconds) {
+        if(isNaN(seconds)) return "00:00";
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+    
+    function sendControl(action, value=null) {
+        fetch(`/video-control/${filename}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: action, value: value})
+        });
+    }
+    
+    function togglePlay() {
+        isPaused = !isPaused;
+        const btn = document.getElementById('playPauseBtn');
+        if(isPaused) {
+            sendControl('pause');
+            btn.innerHTML = '<i class="fas fa-play"></i>';
+        } else {
+            sendControl('play');
+            btn.innerHTML = '<i class="fas fa-pause"></i>';
+        }
+    }
+    
+    function cycleSpeed() {
+        const speeds = [0.5, 1.0, 1.5, 2.0];
+        let idx = speeds.indexOf(currentSpeed);
+        idx = (idx + 1) % speeds.length;
+        currentSpeed = speeds[idx];
+        document.getElementById('speedLabel').innerText = currentSpeed + 'x';
+        sendControl('set_speed', currentSpeed);
+    }
+    
+    function seekVideo(event) {
+        const rect = event.currentTarget.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const percent = (x / rect.width) * 100;
+        
+        // Show loading
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        
+        // Optimistic update
+        document.getElementById('progressBarCurrent').style.width = percent + '%';
+        
+        sendControl('seek', percent);
+        
+        // Resume play if paused
+        if(isPaused) {
+            isPaused = false;
+            document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
+        }
+        
+        // Hide loading after a short delay (backend buffer time)
+        setTimeout(() => {
+             document.getElementById('loadingOverlay').style.display = 'none';
+        }, 1500);
+    }
+    
+    function toggleFullscreen() {
+        const elem = document.querySelector('.video-wrapper');
+        if (!document.fullscreenElement) {
+            elem.requestFullscreen().catch(err => {
+                alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    // Status Polling
+    setInterval(() => {
+        fetch(`/video-state/${filename}`)
+        .then(r => r.json())
+        .then(res => {
+            if(res.status === 'success') {
+                const data = res.data;
+                totalFrames = data.total || 1;
+                const processed = data.processed || 0;
+                const current = data.current || 0;
+                
+                // Update Progress Bars
+                const bufferedPercent = (processed / totalFrames) * 100;
+                const currentPercent = (current / totalFrames) * 100;
+                
+                document.getElementById('progressBarBuffered').style.width = bufferedPercent + '%';
+                document.getElementById('progressBarCurrent').style.width = currentPercent + '%';
+                
+                // Update Time
+                const totalSeconds = totalFrames / 30; // Assuming 30fps base
+                const currentSeconds = current / 30;
+                document.getElementById('timeDisplay').innerText = 
+                    `${formatTime(currentSeconds)} / ${formatTime(totalSeconds)}`;
+                
+                // Sync Pause State
+                if(data.paused !== undefined && data.paused !== isPaused) {
+                    isPaused = data.paused;
+                    const btn = document.getElementById('playPauseBtn');
+                    btn.innerHTML = isPaused ? '<i class="fas fa-play"></i>' : '<i class="fas fa-pause"></i>';
+                }
+            }
+        });
+    }, 500); // 500ms update rate
+    
+    window.onbeforeunload = function() {
+        sendControl('stop');
+    };
+</script>
+{% endblock %}

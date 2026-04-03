@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+
+{% block title %}实时监控 - {{ super() }}{% endblock %}
+
+{% block page_title %}实时摄像头疲劳检测{% endblock %}
+
+{% block content %}
+<div class="content-card full-height" style="display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #000; padding: 0; overflow: hidden; position: relative;">
+    
+    <div style="position: absolute; top: 20px; left: 20px; z-index: 10;">
+        <a href="{{ url_for('index') }}" class="btn" style="background-color: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.3);"><i class="fas fa-arrow-left"></i> 返回首页</a>
+    </div>
+
+    <div style="position: absolute; top: 20px; right: 20px; z-index: 10; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px;">
+        <h3 style="margin: 0; color: white;">实时画面</h3>
+        <p style="margin: 5px 0 0 0; color: #ccc; font-size: 0.8em;">正在分析您的驾驶状态...</p>
+    </div>
+
+    <img src="{{ url_for('camera_feed') }}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+    
+</div>
+
+<style>
+    .full-height {
+        height: calc(100vh - 140px);
+    }
+</style>
+{% endblock %}

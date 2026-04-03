@@ -1,0 +1,80 @@
+{% extends "layout.html" %}
+{% block title %}视频流线框调试 - 管理员工具{% endblock %}
+{% block page_title %}MediaPipe 视频流实时线框追踪{% endblock %}
+
+{% block content %}
+<style>
+    .debug-wrapper {
+        max-width: 900px;
+        margin: 0 auto;
+        background: var(--card-background, #fff);
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        border: 1px solid var(--border-color, #eee);
+    }
+    .video-container {
+        width: 100%;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+        margin-top: 20px;
+    }
+    .video-container img {
+        max-width: 100%;
+        max-height: 550px; 
+        object-fit: contain;
+        display: block;
+    }
+    .info-panel {
+        margin-top: 25px;
+        padding: 15px 20px;
+        background: #fdfdfe;
+        border-left: 4px solid #007bff;
+        border-radius: 4px;
+        box-shadow: inset 0 0 0 1px #e9ecef;
+    }
+</style>
+
+<div class="content-card full-height" style="background: transparent; box-shadow: none; border: none; padding: 0;">
+    <div style="margin-bottom: 20px;">
+        <a href="{{ url_for('index') }}" class="btn" style="background-color: #6c757d; padding: 8px 15px; font-size: 14px; font-weight: normal;"><i class="fas fa-arrow-left"></i> 返回控制台首页</a>
+    </div>
+
+    <div class="debug-wrapper">
+        {% if not video_filename %}
+        <div style="text-align: center; padding: 40px 0;">
+            <h3 style="color: #333; margin-bottom: 12px;">指定视频测试序列</h3>
+            <p style="color: #666; font-size: 14px; margin-bottom: 35px;">系统将强制执行逐帧三维网格绘制。由于渲染性能开销较大，请仅在算法调试阶段使用。</p>
+            
+            <form action="/admin/upload-debug-video" method="post" enctype="multipart/form-data">
+                <div class="file-drop-area" style="max-width: 450px; margin: 0 auto; border-color: #007bff; border-style: dashed; padding: 40px;">
+                    <i class="fas fa-cloud-upload-alt fa-3x" style="color: #007bff; margin-bottom: 15px;"></i>
+                    <span class="file-msg" style="display: block; font-size: 15px; color: #555;">点击或拖拽视频文件至此区域加载</span>
+                    <input class="file-input" type="file" name="file" accept="video/mp4, video/avi, video/mov" required onchange="this.form.submit()">
+                </div>
+            </form>
+        </div>
+        {% else %}
+        <h3 style="color: #333; margin: 0; font-size: 18px;">正在推流诊断通道: <span style="font-weight: normal; color: #555;">{{ video_filename }}</span></h3>
+        
+        <div class="video-container">
+            <img id="videoStream" src="{{ url_for('debug_video_feed', filename=video_filename) }}" alt="视频推流加载中...">
+        </div>
+        
+        <div class="info-panel">
+            <h4 style="margin: 0 0 8px 0; font-size: 15px; color: #333;">诊断通道运行参数说明</h4>
+            <p style="margin: 0; font-size: 13px; color: #666; line-height: 1.6;">
+                当前系统后台正以阻塞模式执行 <code>predict_with_landmarks</code> 绘图函数管线。
+                为保障测试精度，倍速播放及进度条跳转功能已暂时隔离。
+                若需终止当前调试序列进程，请直接导航至其他管理页面。
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,130 @@
+
+{% extends "layout.html" %}
+
+{% block title %}个人资料 - {{ super() }}{% endblock %}
+
+{% block page_title %}个人资料设置{% endblock %}
+
+{% block content %}
+<div class="content-card" style="max-width: 600px; margin: 0 auto;">
+    <form id="profileForm" enctype="multipart/form-data">
+        <div class="profile-header">
+            <div class="avatar-upload">
+                {% if user.avatar %}
+                <img id="avatarPreview" src="{{ url_for('uploaded_file', filename=user.avatar) }}" alt="Avatar">
+                {% else %}
+                <img id="avatarPreview" src="{{ url_for('static', filename='default_avatar.png') }}" alt="Avatar">
+                {% endif %}
+                <div class="avatar-overlay">
+                    <i class="fas fa-camera"></i>
+                    <input type="file" id="avatarInput" name="avatar" accept="image/*" onchange="previewAvatar(this)">
+                </div>
+            </div>
+            <h3>{{ user.username }}</h3>
+            <p>{{ user.email }}</p>
+        </div>
+
+        <div class="form-group">
+            <label>用户名</label>
+            <input type="text" name="username" value="{{ user.username }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label>邮箱</label>
+            <input type="email" name="email" value="{{ user.email }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label>新密码 (留空则不修改)</label>
+            <input type="password" name="password" placeholder="请输入新密码">
+        </div>
+        
+        <button type="button" class="btn" onclick="updateProfile()" style="width: 100%; margin-top: 20px;">保存修改</button>
+    </form>
+</div>
+
+<style>
+    .profile-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    .avatar-upload {
+        position: relative;
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 15px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 3px solid var(--primary-color);
+    }
+    
+    .avatar-upload img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .avatar-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 30px;
+        background: rgba(0,0,0,0.6);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    
+    .avatar-upload:hover .avatar-overlay {
+        opacity: 1;
+    }
+    
+    .avatar-overlay input {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+</style>
+
+<script>
+    function previewAvatar(input) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('avatarPreview').src = e.target.result;
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+    
+    function updateProfile() {
+        const form = document.getElementById('profileForm');
+        const formData = new FormData(form);
+        
+        fetch('/profile', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                alert('保存成功');
+                location.reload();
+            } else {
+                alert('保存失败: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('发生错误: ' + error);
+        });
+    }
+</script>
+{% endblock %}

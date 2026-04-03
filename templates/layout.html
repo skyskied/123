@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}疲劳驾驶智能检测系统{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="main-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h3>导航菜单</h3>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="{{ url_for('index') }}" class="nav-item">
+                            <i class="fas fa-home"></i>
+                            <span>首页</span>
+                        </a>
+                    </li>
+
+                    {% if session.is_admin %}
+                    <div style="margin-top: 20px; padding-left: 20px; color: #888; font-size: 12px; font-weight: bold;">系统管理员功能</div>
+                    <li>
+                        <a href="{{ url_for('admin_users') }}" class="nav-item">
+                            <i class="fas fa-users-cog"></i>
+                            <span>用户管理</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin_debug_image') }}" class="nav-item" style="color: #28a745;">
+                            <i class="fas fa-bug"></i>
+                            <span>图片线框调试</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin_debug_video') }}" class="nav-item" style="color: #28a745;">
+                            <i class="fas fa-video-slash"></i>
+                            <span>视频线框调试</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </aside>
+
+        <div class="main-content">
+            <header class="topbar">
+                <div class="page-title">
+                    <h2>{% block page_title %}控制台{% endblock %}</h2>
+                </div>
+                <div class="user-profile">
+                    <div class="user-menu">
+                        {% if session.avatar %}
+                            <img src="{{ url_for('uploaded_file', filename=session.avatar) }}" alt="Avatar" class="avatar">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='default_avatar.png') }}" alt="Avatar" class="avatar">
+                        {% endif %}
+                        <span>{{ session.username }}</span>
+                        <i class="fas fa-caret-down"></i>
+                        <div class="dropdown-menu">
+                            <a href="{{ url_for('profile') }}">个人资料</a>
+                            <a href="{{ url_for('logout') }}">退出登录</a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="content-area">
+                {% block content %}
+                {% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <script>
+        document.querySelector('.user-menu').addEventListener('click', function() {
+            this.classList.toggle('active');
+        });
+    </script>
+</body>
+</html>
