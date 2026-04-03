@@ -157,6 +157,7 @@ def background_video_processor(video_path, filename):
                 action_text = f"身体行为: {result['action_zh']} ({result['action_conf']:.2f})"
                 face_text = f"面部状态: {result['face_zh']} ({result['face_conf']:.2f})"
 
+                # 剔除了头部姿态的UI渲染，仅保留核心判断
                 frame = put_chinese_text(frame, action_text, (10, 20), action_text_color, font_size=32)
                 frame = put_chinese_text(frame, face_text, (10, 65), face_text_color, font_size=32)
 
@@ -588,6 +589,7 @@ def upload_image():
         action_text = f"行为: {result['action_zh']}"
         face_text = f"面部: {result['face_zh']}"
 
+        # 剔除了头部姿态的UI渲染
         img = put_chinese_text(img, action_text, (10, 20), action_text_color, font_size=32)
         img = put_chinese_text(img, face_text, (10, 65), face_text_color, font_size=32)
 
@@ -736,6 +738,7 @@ def camera_feed():
                     action_text = f"身体行为: {result['action_zh']} ({result['action_conf']:.2f})"
                     face_text = f"面部状态: {result['face_zh']} ({result['face_conf']:.2f})"
 
+                    # 剔除了头部姿态的UI渲染
                     frame = put_chinese_text(frame, action_text, (10, 20), action_text_color, font_size=32)
                     frame = put_chinese_text(frame, face_text, (10, 65), face_text_color, font_size=32)
 

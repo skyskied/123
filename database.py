@@ -9,6 +9,7 @@ DB_CONFIG = {
     'database': 'users_data',
 }
 
+
 def create_database_if_not_exists():
     """如果数据库不存在，则创建数据库"""
     try:
@@ -22,6 +23,7 @@ def create_database_if_not_exists():
     except mysql.connector.Error as err:
         print(f"Failed to create database: {err}")
         exit(1)
+
 
 def get_db_connection():
     """获取数据库连接"""
@@ -37,6 +39,7 @@ def get_db_connection():
             print(err)
         return None
 
+
 def create_users_table():
     """创建 users 表"""
     cnx = get_db_connection()
@@ -44,6 +47,7 @@ def create_users_table():
         return
 
     cursor = cnx.cursor()
+    # 【与论文保持一致】这里修改了 avatar 的约束，不允许为空，给一个默认头像
     table_description = "".join((
         "CREATE TABLE IF NOT EXISTS `users` ( ",
         "`id` INT AUTO_INCREMENT PRIMARY KEY, ",
@@ -51,7 +55,7 @@ def create_users_table():
         "`password` VARCHAR(255) NOT NULL, ",
         "`email` VARCHAR(100) NOT NULL UNIQUE, ",
         "`is_admin` TINYINT(1) NOT NULL DEFAULT 0, ",
-        "`avatar` VARCHAR(255) DEFAULT NULL, ",
+        "`avatar` VARCHAR(255) NOT NULL DEFAULT 'default_avatar.jpg', ",
         "`created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         ") ENGINE=InnoDB"))
     try:
@@ -66,6 +70,7 @@ def create_users_table():
         print("OK")
     cursor.close()
     cnx.close()
+
 
 def add_user(username, password, email, is_admin=0):
     """添加新用户，对密码进行哈希处理"""
@@ -93,6 +98,7 @@ def add_user(username, password, email, is_admin=0):
         cursor.close()
         cnx.close()
 
+
 def verify_user(username, password):
     """验证用户名和密码"""
     cnx = get_db_connection()
@@ -115,6 +121,7 @@ def verify_user(username, password):
         cursor.close()
         cnx.close()
 
+
 def get_all_users():
     """获取所有用户列表 (管理员用)"""
     cnx = get_db_connection()
@@ -134,6 +141,7 @@ def get_all_users():
         cursor.close()
         cnx.close()
 
+
 def delete_user(user_id):
     """删除用户 (管理员用)"""
     cnx = get_db_connection()
@@ -151,6 +159,7 @@ def delete_user(user_id):
     finally:
         cursor.close()
         cnx.close()
+
 
 def get_user_by_id(user_id):
     """通过ID获取用户信息"""
@@ -170,6 +179,7 @@ def get_user_by_id(user_id):
     finally:
         cursor.close()
         cnx.close()
+
 
 def update_user_info(user_id, username, email, password=None, avatar=None):
     """更新用户信息"""
@@ -196,13 +206,13 @@ def update_user_info(user_id, username, email, password=None, avatar=None):
         if avatar:
             updates.append("avatar = %s")
             params.append(avatar)
-            
+
         if not updates:
             return False, "没有需要更新的信息"
 
         params.append(user_id)
         query = f"UPDATE users SET {', '.join(updates)} WHERE id = %s"
-        
+
         cursor.execute(query, tuple(params))
         cnx.commit()
         return True, "信息更新成功"
@@ -211,6 +221,7 @@ def update_user_info(user_id, username, email, password=None, avatar=None):
     finally:
         cursor.close()
         cnx.close()
+
 
 def get_user_by_email(email):
     """通过邮箱获取用户信息"""
@@ -231,6 +242,7 @@ def get_user_by_email(email):
         cursor.close()
         cnx.close()
 
+
 def update_password(email, new_password):
     """更新用户密码"""
     cnx = get_db_connection()
@@ -250,6 +262,7 @@ def update_password(email, new_password):
     finally:
         cursor.close()
         cnx.close()
+
 
 if __name__ == '__main__':
     create_database_if_not_exists()
